@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">Clip Air</string>
+    <string name="search">Search</string>
+    <string name="help">Help</string>
+    <string name="enter_code">Enter code</string>
+    <string name="scanner_label">Scan QR</string>
 </resources>
