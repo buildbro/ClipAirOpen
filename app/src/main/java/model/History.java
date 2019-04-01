@@ -1,11 +1,16 @@
 package model;
 
+import com.google.firebase.database.Exclude;
+import com.google.firebase.database.ServerValue;
+
 public class History {
 
     private String id;
     private String mainText;
     private String timeAdded;
     private boolean shareStatus;
+    private String pushKey;
+    private final Object timePosted = ServerValue.TIMESTAMP;
 
     public History(String id, String mainText, String timeAdded, boolean shareStatus) {
         this.id = id;
@@ -48,5 +53,22 @@ public class History {
 
     public void setShareStatus(boolean shareStatus) {
         this.shareStatus = shareStatus;
+    }
+
+    public String getPushKey() {
+        return pushKey;
+    }
+
+    public void setPushKey(String pushKey) {
+        this.pushKey = pushKey;
+    }
+
+    public Object getTimePosted() {
+        return timePosted;
+    }
+
+    @Exclude
+    public long getTimePostedLong() {
+        return (long)timePosted;
     }
 }

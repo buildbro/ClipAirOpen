@@ -15,8 +15,11 @@ import com.google.android.gms.tasks.Task;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 
+import java.security.SecureRandom;
+
 import model.History;
 import model.User;
+import utils.PairCodeGenerator;
 
 import static com.buildbrothers.clipair.MainActivity.TEMP_UID_KEY;
 
@@ -39,45 +42,31 @@ public class ClipBoardService extends Service {
         mClipBoardManager.addPrimaryClipChangedListener(new ClipboardManager.OnPrimaryClipChangedListener() {
             @Override
             public void onPrimaryClipChanged() {
-                copiedText = mClipBoardManager.getPrimaryClip().getItemAt(0)
-                        .coerceToText(getApplicationContext()).toString();
-                mDatabase = FirebaseDatabase.getInstance();
-                preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+                String clipLabel = "default";
+                if (mClipBoardManager.getPrimaryClip().getDescription().getLabel() != null) {
+                    clipLabel = mClipBoardManager.getPrimaryClip().getDescription().getLabel().toString();
+                }
+                if (!clipLabel.equals("auto_copy_text")) {
+                    copiedText = mClipBoardManager.getPrimaryClip().getItemAt(0)
+                            .coerceToText(getApplicationContext()).toString();
+                    mDatabase = FirebaseDatabase.getInstance();
+                    preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
 
-                String tempUid = preferences.getString(TEMP_UID_KEY, "");
-                if (!tempUid.equalsIgnoreCase("")) {
-                    //TODO: submit for GUEST
-                    Toast.makeText(getApplicationContext(), tempUid, Toast.LENGTH_LONG).show();
-                    userId = tempUid;
-                    insertClipItem();
-                } else {
-                    tempRegistration();
+                    String tempUid = preferences.getString(TEMP_UID_KEY, "");
+                    if (!tempUid.equalsIgnoreCase("")) {
+                        //TODO: submit for GUEST
+                        Toast.makeText(getApplicationContext(), tempUid, Toast.LENGTH_LONG).show();
+                        userId = tempUid;
+                        insertClipItem();
+                    } else {
+                        Toast.makeText(getApplicationContext(), "Oops! Something went wrong.", Toast.LENGTH_LONG).show();
+                    }
                 }
 
-
-                Toast.makeText(getApplicationContext(), copiedText, Toast.LENGTH_LONG).show();
             }
         });
 
         return mStartMode;
-    }
-
-    private void tempRegistration() {
-        final DatabaseReference myRef = mDatabase.getReference("users").push();
-        user = new User(false, null);
-        myRef.setValue(user).addOnCompleteListener(new OnCompleteListener<Void>() {
-            @Override
-            public void onComplete(@NonNull Task<Void> task) {
-                if (task.isSuccessful()) {
-                    SharedPreferences.Editor editor = preferences.edit();
-                    editor.putString(TEMP_UID_KEY, myRef.getKey());
-                    editor.apply();
-                    Toast.makeText(getApplicationContext(), "ClipAir temp user created!", Toast.LENGTH_LONG).show();
-                    userId = myRef.getKey();
-                    insertClipItem();
-                }
-            }
-        });
     }
 
     private void insertClipItem() {

@@ -4,4 +4,18 @@
     <string name="help">Help</string>
     <string name="enter_code">Enter code</string>
     <string name="scanner_label">Scan QR</string>
+    <string name="share_message">Scan QR Code on second device or enter code:</string>
+    <string name="paired_devices">PAIRED DEVICES</string>
+
+    <string name="default_notification_channel_id" translatable="false">fcm_default_channel</string>
+    <string name="default_notification_channel_name" translatable="true">Utils</string>
+    <string name="welcome_title">Thank you for installing ClipAir.</string>
+    <string name="welcome_message">ClipAir helps you extend the clipboard on your device. By default when you copy text to the clipboard on your device, the text is overwritten the next time you perform another copy operation. With ClipAir, you can view an extended history of your clipboard and share copied text across devices.</string>
+    <string name="setup_account_btn">Setup Account</string>
+    <string name="welcome_get_started">to get started:</string>
+    <string name="account">Account</string>
+    <string name="finding_device">finding device..</string>
+    <string name="pairing">pairing...</string>
+    <string name="remove">Remove</string>
+    <string name="recent_history">Recent Clip History</string>
 </resources>
