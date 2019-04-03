@@ -36,26 +36,38 @@
                 android:layout_width="48dp"
                 android:layout_height="48dp"
                 android:layout_margin="16dp"
-                android:src="@drawable/ic_account_circle_dark_24dp" />
+                android:src="@drawable/ic_account_circle_dark_24dp"
+                android:contentDescription="@string/signed_in_as"/>
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_margin="8dp"
-                android:text="Signed in as:" />
+                android:text="@string/signed_in_as" />
 
             <TextView
                 android:id="@+id/user_email"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content" />
 
-            <TextView
-                android:id="@+id/sign_out_btn"
+            <FrameLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_margin="16dp"
-                android:text="Sign Out"
-                android:textColor="@color/colorAccent" />
+                android:layout_margin="16dp">
+
+                <TextView
+                    android:id="@+id/sign_out_btn"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/sign_out"
+                    android:textColor="@color/colorAccent" />
+
+                <ProgressBar
+                    android:id="@+id/sign_out_pb"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:visibility="gone"/>
+            </FrameLayout>
 
         </LinearLayout>
     </ScrollView>

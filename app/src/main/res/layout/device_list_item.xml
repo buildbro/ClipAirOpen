@@ -3,19 +3,22 @@
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
     android:orientation="horizontal"
-    android:padding="8dp">
+    android:padding="@dimen/margin_padding_size_small">
 
     <ImageView
         android:id="@+id/device_icon"
-        android:layout_width="16dp"
-        android:layout_height="16dp"
-        android:layout_marginRight="8dp"
-        android:src="@drawable/cellphone_android" />
+        android:layout_width="@dimen/small_ico_width"
+        android:layout_height="@dimen/small_ico_height"
+        android:layout_marginRight="@dimen/margin_padding_size_small"
+        android:src="@drawable/cellphone_android"
+        android:contentDescription="@string/device_icon"
+        android:layout_marginEnd="@dimen/margin_padding_size_small" />
 
     <TextView
         android:id="@+id/device_name"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:textColor="@color/primary_text"
         android:gravity="center_horizontal" />
 
     <View
@@ -29,8 +32,8 @@
         android:layout_height="wrap_content"
         android:id="@+id/options"
         android:src="@drawable/ic_more_vert_grey_24dp"
+        android:contentDescription="@string/device_option"
         android:padding="4dp"
-        android:paddingRight="0dp"
         android:clickable="true" />
 
 </LinearLayout>

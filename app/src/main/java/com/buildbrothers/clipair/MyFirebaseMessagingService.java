@@ -25,7 +25,9 @@ import com.google.firebase.messaging.RemoteMessage;
 
 import model.History;
 
-import static com.buildbrothers.clipair.MainActivity.TEMP_UID_KEY;
+import static utils.Constants.DB_PATH_USERS;
+import static utils.Constants.TEMP_UID_KEY;
+
 
 public class MyFirebaseMessagingService extends FirebaseMessagingService {
     private static final String CHANNEL_UTILS = "Utility";
@@ -46,10 +48,10 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
             String userId = preferences.getString(TEMP_UID_KEY, "");
 
-            mDbRef = mFirebaseDatabase.getReference("users/" + userId + "/clips").push();
+            mDbRef = mFirebaseDatabase.getReference(DB_PATH_USERS + "/" + userId + "/clips").push();
             final String message = remoteMessage.getData().get("body");
             final String title = remoteMessage.getData().get("title");
-            History history = new History("12", message, "Just now", true);
+            History history = new History(null, message, true);
             mDbRef.setValue(history).addOnCompleteListener(new OnCompleteListener<Void>() {
                 @Override
                 public void onComplete(@NonNull Task<Void> task) {

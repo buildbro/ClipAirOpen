@@ -20,7 +20,8 @@ import java.util.List;
 
 import model.History;
 
-import static com.buildbrothers.clipair.MainActivity.TEMP_UID_KEY;
+import static utils.Constants.TEMP_UID_KEY;
+
 
 class WidgetDataProvider implements RemoteViewsService.RemoteViewsFactory {
 

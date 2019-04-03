@@ -20,10 +20,9 @@ import java.util.List;
 
 import model.History;
 
-public class HistoryListAdapter extends RecyclerView.Adapter<HistoryListAdapter.HistoryViewHolder> implements Filterable {
+public class HistoryListAdapter extends RecyclerView.Adapter<HistoryListAdapter.HistoryViewHolder> {
 
-    private List<History> mHistoryList; //cached copy
-    private List<History> mFilteredHistoryList = new ArrayList<>();
+    private List<History> mHistoryList;
     private LayoutInflater mInflater;
     private RecyclerViewClickListener listener;
     private Context mContext;
@@ -62,8 +61,8 @@ public class HistoryListAdapter extends RecyclerView.Adapter<HistoryListAdapter.
 
     @Override
     public void onBindViewHolder(@NonNull HistoryViewHolder historyViewHolder, int i) {
-        if (mFilteredHistoryList != null) {
-            History currentHistory = mFilteredHistoryList.get(i);
+        if (mHistoryList != null) {
+            History currentHistory = mHistoryList.get(i);
             historyViewHolder.mainText.setText(currentHistory.getMainText());
 
             if (currentHistory.getTimePosted() != null) {
@@ -83,8 +82,8 @@ public class HistoryListAdapter extends RecyclerView.Adapter<HistoryListAdapter.
 
     @Override
     public int getItemCount() {
-        if (mFilteredHistoryList != null) {
-            return mFilteredHistoryList.size();
+        if (mHistoryList != null) {
+            return mHistoryList.size();
         } else {
             return 0;
         }
@@ -92,57 +91,19 @@ public class HistoryListAdapter extends RecyclerView.Adapter<HistoryListAdapter.
 
     @Override
     public long getItemId(int position) {
-        if (position < mFilteredHistoryList.size()) {
-            return mFilteredHistoryList.get(position).getTimePostedLong();
+        if (position < mHistoryList.size()) {
+            return mHistoryList.get(position).getTimePostedLong();
         }
         return  RecyclerView.NO_ID;
     }
 
     void setHistoryItems(List<History> historyItems) {
         mHistoryList = historyItems;
-        mFilteredHistoryList.clear();
-        mFilteredHistoryList.addAll(mHistoryList);
         notifyDataSetChanged();
     }
 
     public List<History> getHistoryItems() {
-        return mFilteredHistoryList;
-    }
-
-    public void clear() {
-        int size = mFilteredHistoryList.size();
-        mFilteredHistoryList.clear();
-        notifyItemRangeRemoved(0, size);
-    }
-
-    @Override
-    public Filter getFilter() {
-        return new Filter() {
-            @Override
-            protected FilterResults performFiltering(CharSequence constraint) {
-                String charString = constraint.toString();
-                List<History> filteredList = new ArrayList<>();
-                if (charString.isEmpty()) {
-                    filteredList = mHistoryList;
-                } else {
-                    for (History row : mHistoryList) {
-                        if (row.getMainText().toLowerCase().contains(charString.toLowerCase())) {
-                            filteredList.add(row);
-                        }
-                    }
-                }
-
-                FilterResults filterResults = new FilterResults();
-                filterResults.values = filteredList;
-                return filterResults;
-            }
-
-            @Override
-            protected void publishResults(CharSequence constraint, FilterResults results) {
-                mFilteredHistoryList = (ArrayList<History>) results.values;
-                notifyDataSetChanged();
-            }
-        };
+        return mHistoryList;
     }
 
 }

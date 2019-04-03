@@ -49,8 +49,8 @@
 
                 <ImageView
                     android:id="@+id/qr_code"
-                    android:layout_width="300dp"
-                    android:layout_height="300dp"
+                    android:layout_width="@dimen/qr_image_width"
+                    android:layout_height="@dimen/qr_image_height"
                     android:layout_gravity="center_horizontal" />
             </LinearLayout>
 

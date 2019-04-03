@@ -4,9 +4,9 @@
     xmlns:card_view="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:minHeight="60dp"
-    app:contentPadding="16dp"
-    card_view:cardElevation="4dp"
+    android:minHeight="@dimen/card_view_min_height"
+    app:contentPadding="@dimen/margin_padding_size_medium"
+    card_view:cardElevation="@dimen/card_elevation"
     card_view:cardUseCompatPadding="true">
 
     <LinearLayout
@@ -20,13 +20,14 @@
             android:layout_height="wrap_content"
             android:ellipsize="end"
             android:maxLines="5"
-            android:text="sample data of copied text! hohoho!!!" />
+            android:textSize="@dimen/text_size_medium"
+            android:textColor="@color/primary_text" />
 
         <View
             android:layout_width="match_parent"
             android:layout_height="0.9dp"
-            android:layout_marginBottom="8dp"
-            android:layout_marginTop="8dp"
+            android:layout_marginBottom="@dimen/margin_padding_size_small"
+            android:layout_marginTop="@dimen/margin_padding_size_small"
             android:background="#DDDDDD" />
 
         <LinearLayout
@@ -37,14 +38,17 @@
             <ImageView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:src="@drawable/ic_access_time_grey_24dp" />
+                android:src="@drawable/ic_clock_outline_grey600_24dp"
+                android:layout_marginRight="@dimen/margin_padding_size_small"
+                android:layout_marginEnd="@dimen/margin_padding_size_small"
+                android:contentDescription="@string/time_created"/>
 
             <TextView
                 android:id="@+id/time_posted"
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="14/02/2019" />
+                android:textColor="@color/secondary_text"/>
 
         </LinearLayout>
 

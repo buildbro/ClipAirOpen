@@ -25,8 +25,13 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.github.clans.fab.FloatingActionButton;
+import com.github.clans.fab.FloatingActionMenu;
+import com.github.thunder413.datetimeutils.DateTimeStyle;
+import com.github.thunder413.datetimeutils.DateTimeUtils;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
@@ -35,6 +40,7 @@ import com.google.firebase.database.Query;
 import com.google.firebase.database.ValueEventListener;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 import model.Device;
@@ -42,28 +48,35 @@ import model.History;
 import model.Pairing;
 import model.User;
 
-import static com.buildbrothers.clipair.WelcomeActivity.ORIGIN_CODE_NAME;
+import static utils.Constants.DB_PATH_IS_PAIRING;
+import static utils.Constants.DB_PATH_PAIRED_DEVICES;
+import static utils.Constants.DB_PATH_USERS;
+import static utils.Constants.EXTRA_BODY_KEY;
+import static utils.Constants.FIRST_RUN_KEY;
+import static utils.Constants.ORIGIN_CODE_KEY;
+import static utils.Constants.ORIGIN_CODE_VALUE_MAIN;
+import static utils.Constants.PAIR_CODE_SIZE;
+import static utils.Constants.PERM_PAIR_CODE;
+import static utils.Constants.TEMP_UID_KEY;
+import static utils.GenUtils.isNetworkAvailable;
 
-public class MainActivity extends AppCompatActivity implements RecyclerViewClickListener {
-    private static final int ORIGIN_CODE_MAIN = 2;
+public class MainActivity extends AppCompatActivity implements RecyclerViewClickListener, SharedPreferences.OnSharedPreferenceChangeListener {
     private RecyclerView historyRecyclerView;
     private ProgressBar progressBar;
     private HistoryListAdapter mAdapter;
     private List<History> mHistoryArray = new ArrayList<>();
 
+    private FloatingActionMenu fabMenu;
     private FloatingActionButton scannerBtn, codeBtn;
 
     private FirebaseDatabase mFirebaseDatabase;
     private DatabaseReference myRef;
 
     private SharedPreferences preferences;
-    private String userId;
+    private String userTempKey;
     private String userPermPairCode;
     private boolean notPaired;
-    private String token;
 
-    public static final String TEMP_UID_KEY = "UID";
-    public static final String PERM_PAIR_CODE = "PPC";
     private String senderPermPairCode;
     private String deviceName;
     private String senderDeviceName;
@@ -71,13 +84,16 @@ public class MainActivity extends AppCompatActivity implements RecyclerViewClick
     private ProgressBar pairingProgressBar;
     private TextView progressBarMessage;
     private AlertDialog dialogC;
-    private SearchView searchView;
 
     private ValueEventListener historyItemListener;
     private ValueEventListener pairedDevicesListener;
     private Query mQuery;
     private AlertDialog dialogDetails;
     private History currentHistoryItem;
+    private FirebaseAuth mFirebaseAuth;
+    private FirebaseAuth.AuthStateListener mAuthStateListener;
+    private boolean isFirstRun;
+    private TextView emptyView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -87,20 +103,18 @@ public class MainActivity extends AppCompatActivity implements RecyclerViewClick
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        Intent sIntent = new Intent(this, ClipBoardService.class);
-        this.startService(sIntent);
-
         mFirebaseDatabase = FirebaseDatabase.getInstance();
         preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
-        userId = preferences.getString(TEMP_UID_KEY, "");
+        userTempKey = preferences.getString(TEMP_UID_KEY, "");
         userPermPairCode = preferences.getString(PERM_PAIR_CODE, "");
+
+        preferences.registerOnSharedPreferenceChangeListener(this);
 
         checkIfFirstRun();
 
         initializeUI();
 
-        //retrieveFirebaseId();
-
+        fabMenu.setClosedOnTouchOutside(true);
 
         scannerBtn.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -115,41 +129,47 @@ public class MainActivity extends AppCompatActivity implements RecyclerViewClick
                 openCodeDialog();
             }
         });
-    }
 
-    private void checkIfFirstRun() {
-        boolean isFirstRun = preferences.getBoolean("firstRun", true);
-        if (isFirstRun) {
-            Intent welcomeIntent = new Intent(MainActivity.this, WelcomeActivity.class);
-            startActivity(welcomeIntent);
-            finish();
+        mFirebaseAuth = FirebaseAuth.getInstance();
+
+        mAuthStateListener = new FirebaseAuth.AuthStateListener() {
+            @Override
+            public void onAuthStateChanged(@NonNull FirebaseAuth firebaseAuth) {
+                FirebaseUser user = firebaseAuth.getCurrentUser();
+
+                if (user == null) {
+                    checkIfFirstRun();
+                }
+            }
+        };
+
+        if(!isNetworkAvailable(getApplicationContext())) {
+            Toast.makeText(getApplicationContext(), "Your are currently offline", Toast.LENGTH_LONG).show();
+            if (progressBar != null) {
+                progressBar.setVisibility(View.GONE);
+            }
         }
     }
 
-    /*private String retrieveFirebaseId() {
-        FirebaseInstanceId.getInstance()
-                .getInstanceId().addOnCompleteListener(new OnCompleteListener<InstanceIdResult>() {
-            @Override
-            public void onComplete(@NonNull Task<InstanceIdResult> task) {
-                if (!task.isSuccessful()) {
-                    return;
-                }
-
-                token = task.getResult().getToken();
-            }
-        });
-
-        return token;
-    } */
+    private void checkIfFirstRun() {
+        isFirstRun = preferences.getBoolean(FIRST_RUN_KEY, true);
+        if (isFirstRun) {
+            Intent welcomeIntent = new Intent(MainActivity.this, WelcomeActivity.class);
+            welcomeIntent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK|Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(welcomeIntent);
+        }
+    }
 
     private void initializeUI() {
 
         //Views for fab
+        fabMenu = findViewById(R.id.menu);
         scannerBtn = findViewById(R.id.menu_item_qr);
         codeBtn = findViewById(R.id.menu_item_code);
 
         progressBar = findViewById(R.id.history_progress_bar);
         progressBar.setVisibility(View.VISIBLE);
+        emptyView = findViewById(R.id.empty_view);
         historyRecyclerView = findViewById(R.id.history_recycler_view);
         mAdapter = new HistoryListAdapter(MainActivity.this, this);
 
@@ -157,13 +177,6 @@ public class MainActivity extends AppCompatActivity implements RecyclerViewClick
         layoutManager.setStackFromEnd(true);
         historyRecyclerView.setLayoutManager(layoutManager);
         historyRecyclerView.setAdapter(mAdapter);
-
-
-        //TODO Temp Firebase code Please clean-up before code upload
-        /*DatabaseReference tempRef;
-        tempRef = mFirebaseDatabase.getReference("pairedDevices");
-        tempRef.setValue(new Device("33333", "67yyh", "dsds", "Sdsd")); */
-
     }
 
     private void retrieveHistory() {
@@ -175,7 +188,11 @@ public class MainActivity extends AppCompatActivity implements RecyclerViewClick
                     mHistoryArray.clear();
                     for (DataSnapshot dataSnapshot1 : dataSnapshot.getChildren()) {
                         History history = dataSnapshot1.getValue(History.class);
-                        history.setPushKey(dataSnapshot1.getKey().toString());
+
+                        if (history == null) {
+                            throw new NullPointerException("History is null");
+                        }
+                        history.setPushKey(dataSnapshot1.getKey());
                         mHistoryArray.add(history);
                     }
 
@@ -183,6 +200,15 @@ public class MainActivity extends AppCompatActivity implements RecyclerViewClick
 
                     if (progressBar.getVisibility() == View.VISIBLE) {
                         progressBar.setVisibility(View.GONE);
+                    }
+                    
+                    if (mHistoryArray.isEmpty()) {
+                        historyRecyclerView.setVisibility(View.GONE);
+                        emptyView.setVisibility(View.VISIBLE);
+                        
+                    } else {
+                        historyRecyclerView.setVisibility(View.VISIBLE);
+                        emptyView.setVisibility(View.GONE);
                     }
 
                 }
@@ -194,10 +220,12 @@ public class MainActivity extends AppCompatActivity implements RecyclerViewClick
             };
         }
 
-        myRef = mFirebaseDatabase.getReference("users/" + userId + "/clips");
-        myRef.keepSynced(true);
+        if (!userTempKey.equals("")) {
+            myRef = mFirebaseDatabase.getReference(DB_PATH_USERS + "/" + userTempKey + "/clips");
+            myRef.keepSynced(true);
 
-        myRef.addValueEventListener(historyItemListener);
+            myRef.addValueEventListener(historyItemListener);
+        }
     }
 
     private void detachHistoryItemListener() {
@@ -210,28 +238,13 @@ public class MainActivity extends AppCompatActivity implements RecyclerViewClick
             }
             myRef.removeEventListener(historyItemListener);
             historyItemListener = null;
-            //mAdapter.clear();
         }
     }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.menu_main, menu);
-        final MenuItem searchItem = menu.findItem(R.id.search);
-        searchView = (SearchView) searchItem.getActionView();
-        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
-            @Override
-            public boolean onQueryTextSubmit(String query) {
-                mAdapter.getFilter().filter(query);
-                return false;
-            }
 
-            @Override
-            public boolean onQueryTextChange(String newText) {
-                mAdapter.getFilter().filter(newText);
-                return false;
-            }
-        });
         return super.onCreateOptionsMenu(menu);
     }
 
@@ -239,20 +252,26 @@ public class MainActivity extends AppCompatActivity implements RecyclerViewClick
     public boolean onOptionsItemSelected(MenuItem item) {
         // Handle item selection
         switch (item.getItemId()) {
-            case R.id.search:
-                //newGame();
-                return true;
             case R.id.help:
-                //showHelp();
+                showHelp();
                 return true;
             case R.id.account:
-                Intent accountIntent = new Intent(MainActivity.this, AccountActivity.class);
-                accountIntent.putExtra(ORIGIN_CODE_NAME, ORIGIN_CODE_MAIN);
-                startActivity(accountIntent);
+                gotoAccount();
                 return true;
             default:
                 return super.onOptionsItemSelected(item);
         }
+    }
+
+    private void gotoAccount() {
+        Intent accountIntent = new Intent(MainActivity.this, AccountActivity.class);
+        accountIntent.putExtra(ORIGIN_CODE_KEY, ORIGIN_CODE_VALUE_MAIN);
+        startActivity(accountIntent);
+    }
+
+    private void showHelp() {
+        Intent helpIntent = new Intent(MainActivity.this, HelpActivity.class);
+        startActivity(helpIntent);
     }
 
     @Override
@@ -263,21 +282,23 @@ public class MainActivity extends AppCompatActivity implements RecyclerViewClick
         AlertDialog.Builder mBuilder = new AlertDialog.Builder(MainActivity.this);
         View mView = getLayoutInflater().inflate(R.layout.dialog_details, null);
         TextView mTextView = mView.findViewById(R.id.main_text);
-        TextView dateTextView = mView.findViewById(R.id.details);
+        TextView dateTextView = mView.findViewById(R.id.date_created);
         ImageView share = mView.findViewById(R.id.btnShare);
         ImageView delete = mView.findViewById(R.id.btnDelete);
 
-        dateTextView.setText("Created ");
+        Date datePosted = new Date(currentHistoryItem.getTimePostedLong());
+        dateTextView.setText(DateTimeUtils.formatWithStyle(datePosted, DateTimeStyle.MEDIUM));
         mTextView.setText(currentHistoryItem.getMainText());
         mBuilder.setView(mView);
         dialogDetails = mBuilder.create();
         dialogDetails.show();
+
         //dialog buttons control
         share.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 Intent intent = new Intent(getApplicationContext(), ShareActivity.class);
-                intent.putExtra("body", currentHistoryItem.getMainText());
+                intent.putExtra(EXTRA_BODY_KEY, currentHistoryItem.getMainText());
                 startActivity(intent);
             }
         });
@@ -285,7 +306,7 @@ public class MainActivity extends AppCompatActivity implements RecyclerViewClick
         delete.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                DatabaseReference deleteRef = mFirebaseDatabase.getReference("users/" + userId + "/clips/" + currentHistoryItem.getPushKey());
+                DatabaseReference deleteRef = mFirebaseDatabase.getReference(DB_PATH_USERS + "/" + userTempKey + "/clips/" + currentHistoryItem.getPushKey());
                 deleteRef.removeValue().addOnCompleteListener(new OnCompleteListener<Void>() {
                     @Override
                     public void onComplete(@NonNull Task<Void> task) {
@@ -331,7 +352,7 @@ public class MainActivity extends AppCompatActivity implements RecyclerViewClick
 
             @Override
             public void afterTextChanged(Editable s) {
-                if (s.length() == 7) {
+                if (s.length() == PAIR_CODE_SIZE) {
                     notPaired = true;
                     progressBarContainer.setVisibility(View.VISIBLE);
                     progressBarMessage.setText(R.string.finding_device);
@@ -350,42 +371,27 @@ public class MainActivity extends AppCompatActivity implements RecyclerViewClick
         dialogC.show();
     }
 
-    /*private void tempRegistration() {
-        final DatabaseReference myRef = mFirebaseDatabase.getReference("users").push();
-        User user = new User(false, null, null, token);
-        myRef.setValue(user).addOnCompleteListener(new OnCompleteListener<Void>() {
-            @Override
-            public void onComplete(@NonNull Task<Void> task) {
-                if (task.isSuccessful()) {
-                    SharedPreferences.Editor editor = preferences.edit();
-                    editor.putString(TEMP_UID_KEY, myRef.getKey());
-                    editor.putString(PERM_PAIR_CODE, token);
-                    editor.apply();
-                    Toast.makeText(getApplicationContext(), "ClipAir temp user created!", Toast.LENGTH_LONG).show();
-                    userId = myRef.getKey();
-
-                    retrieveHistory();
-                }
-            }
-        });
-    }  */
-
     private void pairWithCode(final String code) {
-        Query mQuery = mFirebaseDatabase.getReference().child("users")
+        Query mQuery = mFirebaseDatabase.getReference().child(DB_PATH_USERS)
                 .orderByChild("pairCode").equalTo(code);
         mQuery.addListenerForSingleValueEvent(new ValueEventListener() {
+
             @Override
             public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
                 if (dataSnapshot.getChildrenCount() > 0) {
                     progressBarMessage.setText(R.string.pairing);
                     User senderUserData = dataSnapshot.getChildren().iterator().next().getValue(User.class);
+                    if (senderUserData == null) {
+                        throw new NullPointerException("SenderData is null");
+                    }
                     senderPermPairCode = senderUserData.getPermPairCode();
                     deviceName = Build.MODEL;
                     senderDeviceName = senderUserData.getDeviceName();
 
-                    DatabaseReference isPairingRef = mFirebaseDatabase.getReference("isPairing").push();
+                    DatabaseReference isPairingRef = mFirebaseDatabase.getReference(DB_PATH_IS_PAIRING).push();
                     Pairing pairing = new Pairing(code, userPermPairCode, deviceName);
                     isPairingRef.setValue(pairing).addOnCompleteListener(new OnCompleteListener<Void>() {
+
                         @Override
                         public void onComplete(@NonNull Task<Void> task) {
                             if (task.isSuccessful()) {
@@ -412,8 +418,8 @@ public class MainActivity extends AppCompatActivity implements RecyclerViewClick
                 if (dataSnapshot.getChildrenCount() > 0) {
                     if (notPaired) {
                         notPaired = false;
-                        DatabaseReference pairRef = mFirebaseDatabase.getReference("pairedDevices").push();
-                        Device pairDevice = new Device(userId, senderPermPairCode, code, deviceName, senderDeviceName, true);
+                        DatabaseReference pairRef = mFirebaseDatabase.getReference(DB_PATH_PAIRED_DEVICES).push();
+                        Device pairDevice = new Device(userTempKey, senderPermPairCode, code, deviceName, senderDeviceName, true);
                         pairRef.setValue(pairDevice).addOnCompleteListener(new OnCompleteListener<Void>() {
                             @Override
                             public void onComplete(@NonNull Task<Void> task) {
@@ -439,7 +445,7 @@ public class MainActivity extends AppCompatActivity implements RecyclerViewClick
             }
         };
 
-        mQuery = mFirebaseDatabase.getReference().child("pairedDevices")
+        mQuery = mFirebaseDatabase.getReference().child(DB_PATH_PAIRED_DEVICES)
                 .orderByChild("pairCode").equalTo(code);
         mQuery.addValueEventListener(pairedDevicesListener);
     }
@@ -457,8 +463,13 @@ public class MainActivity extends AppCompatActivity implements RecyclerViewClick
     @Override
     protected void onResume() {
         super.onResume();
-        if (!userId.equals("")) {
+
+        if (!userTempKey.equals("")) {
             retrieveHistory();
+        }
+
+        if (mAuthStateListener != null) {
+            mFirebaseAuth.addAuthStateListener(mAuthStateListener);
         }
     }
 
@@ -467,5 +478,26 @@ public class MainActivity extends AppCompatActivity implements RecyclerViewClick
         super.onPause();
         detachHistoryItemListener();
         detachPairedDevicesListener();
+
+        if (mAuthStateListener != null) {
+            mFirebaseAuth.removeAuthStateListener(mAuthStateListener);
+        }
     }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        PreferenceManager.getDefaultSharedPreferences(this)
+                .unregisterOnSharedPreferenceChangeListener(this);
+    }
+
+    @Override
+    public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
+        userTempKey = sharedPreferences.getString(TEMP_UID_KEY, "");
+        isFirstRun = sharedPreferences.getBoolean(FIRST_RUN_KEY, true);
+        detachHistoryItemListener();
+        retrieveHistory();
+
+    }
+
 }

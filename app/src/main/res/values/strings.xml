@@ -18,4 +18,56 @@
     <string name="pairing">pairing...</string>
     <string name="remove">Remove</string>
     <string name="recent_history">Recent Clip History</string>
+    <string name="temp_user_created">ClipAir temp user created!</string>
+
+    <string name="license_clan_fab">
+        <b>CLan FloatingActionButton</b> \n \n
+        Copyright 2015 Dmytro Tarianyk \n \n
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at \n
+
+   http://www.apache.org/licenses/LICENSE-2.0 \n
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+    </string>
+
+    <string name="license_xing">
+        <b>ZXing Android Embedded</b> \n \n
+        Copyright (C) 2012-2018 ZXing authors, Journey Mobile \n \n
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at \n \n
+
+    http://www.apache.org/licenses/LICENSE-2.0 \n \n
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+    </string>
+
+    <string name="license_date_utils">
+        <b>DateTimeUtils</b> \n \n
+    This project is licensed under the MIT License: \n \n
+        http://www.opensource.org/licenses/mit-license.php
+    </string>
+    <string name="share_activity_title">Share</string>
+    <string name="account_activity_name">User Account</string>
+    <string name="help_and_credits">ClipAir Help and Credits</string>
+    <string name="licenses_area_heading">Open source licenses</string>
+    <string name="time_created">time created</string>
+    <string name="guest_sign_in_link">Continue as Guest</string>
+    <string name="or">Or</string>
+    <string name="sign_out">Sign Out</string>
+    <string name="signed_in_as">Signed in as:</string>
+    <string name="empty_view_text">No data yet!</string>
+    <string name="device_option">device option</string>
+    <string name="device_icon">device icon</string>
 </resources>

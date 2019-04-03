@@ -1,4 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <dimen name="widget_margin">8dp</dimen>
+    <dimen name="qr_image_width">300dp</dimen>
+    <dimen name="qr_image_height">300dp</dimen>
+
+    <dimen name="margin_padding_size_small">8dp</dimen>
+    <dimen name="margin_padding_size_medium">16dp</dimen>
+    <dimen name="margin_padding_size_large">24dp</dimen>
+
+    <dimen name="text_size_micro">12sp</dimen>
+    <dimen name="text_size_small">14sp</dimen>
+    <dimen name="text_size_medium">16sp</dimen>
+    <dimen name="text_size_large">20sp</dimen>
+    <dimen name="text_size_xlarge">34sp</dimen>
+    <dimen name="text_size_xxlarge">45sp</dimen>
+    <dimen name="text_size_xxxlarge">56sp</dimen>
+
+    <dimen name="welcome_image_width">200dp</dimen>
+    <dimen name="card_elevation">4dp</dimen>
+    <dimen name="card_view_min_height">60dp</dimen>
+    <dimen name="welcome_image_height">200dp</dimen>
+    <dimen name="recycler_view_bottom_padding">164dp</dimen>
+    <dimen name="small_ico_width">16dp</dimen>
+    <dimen name="small_ico_height">16dp</dimen>
 </resources>

@@ -7,15 +7,13 @@ public class History {
 
     private String id;
     private String mainText;
-    private String timeAdded;
     private boolean shareStatus;
     private String pushKey;
     private final Object timePosted = ServerValue.TIMESTAMP;
 
-    public History(String id, String mainText, String timeAdded, boolean shareStatus) {
+    public History(String id, String mainText, boolean shareStatus) {
         this.id = id;
         this.mainText = mainText;
-        this.timeAdded = timeAdded;
         this.shareStatus = shareStatus;
     }
 
@@ -37,14 +35,6 @@ public class History {
 
     public void setMainText(String mainText) {
         this.mainText = mainText;
-    }
-
-    public String getTimeAdded() {
-        return timeAdded;
-    }
-
-    public void setTimeAdded(String timeAdded) {
-        this.timeAdded = timeAdded;
     }
 
     public boolean isShareStatus() {

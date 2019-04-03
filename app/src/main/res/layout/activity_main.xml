@@ -23,7 +23,8 @@
 
     <FrameLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="match_parent"
+        android:layout_marginTop="?actionBarSize"
         app:layout_constraintTop_toBottomOf="@id/appBarLayout"
         app:layout_constraintStart_toStartOf="parent">
 
@@ -31,9 +32,17 @@
             android:id="@+id/history_recycler_view"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:paddingBottom="164dp"
+            android:paddingBottom="@dimen/recycler_view_bottom_padding"
             android:clipToPadding="false"
             android:scrollbarStyle="outsideOverlay"/>
+
+        <TextView
+            android:id="@+id/empty_view"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:text="@string/empty_view_text"
+            android:visibility="gone"/>
 
         <ProgressBar
             android:id="@+id/history_progress_bar"
@@ -45,13 +54,13 @@
 
     <com.github.clans.fab.FloatingActionMenu
         android:id="@+id/menu"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
-        android:layout_marginRight="10dp"
-        android:layout_marginBottom="10dp"
-        android:layout_marginLeft="10dp"
+        android:layout_marginRight="@dimen/margin_padding_size_small"
+        android:layout_marginBottom="@dimen/margin_padding_size_small"
+        android:layout_marginLeft="@dimen/margin_padding_size_small"
         fab:menu_fab_size="normal"
         fab:menu_showShadow="true"
         fab:menu_shadowColor="#66000000"
@@ -68,10 +77,10 @@
         fab:menu_labels_showAnimation="@anim/fab_slide_in_from_right"
         fab:menu_labels_hideAnimation="@anim/fab_slide_out_to_right"
         fab:menu_labels_paddingTop="4dp"
-        fab:menu_labels_paddingRight="8dp"
+        fab:menu_labels_paddingRight="@dimen/margin_padding_size_small"
         fab:menu_labels_paddingBottom="4dp"
-        fab:menu_labels_paddingLeft="8dp"
-        fab:menu_labels_padding="8dp"
+        fab:menu_labels_paddingLeft="@dimen/margin_padding_size_small"
+        fab:menu_labels_padding="@dimen/margin_padding_size_small"
         fab:menu_labels_textColor="#FFFFFF"
         fab:menu_labels_textSize="14sp"
         fab:menu_labels_cornerRadius="3dp"
@@ -85,7 +94,7 @@
         fab:menu_labels_style="@style/MenuLabelsStyle"
         fab:menu_labels_position="left"
         fab:menu_openDirection="up"
-        fab:menu_backgroundColor="@color/white_semi_transparent"
+        fab:menu_backgroundColor="#ccffffff"
         fab:menu_fab_show_animation="@anim/jump_from_down"
         fab:menu_fab_hide_animation="@anim/jump_to_down">
 

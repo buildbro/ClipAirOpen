@@ -24,8 +24,12 @@ import model.Pairing;
 import model.User;
 import utils.PairCodeGenerator;
 
-import static com.buildbrothers.clipair.MainActivity.PERM_PAIR_CODE;
-import static com.buildbrothers.clipair.MainActivity.TEMP_UID_KEY;
+import static utils.Constants.DB_PATH_IS_PAIRING;
+import static utils.Constants.DB_PATH_PAIRED_DEVICES;
+import static utils.Constants.DB_PATH_USERS;
+import static utils.Constants.PERM_PAIR_CODE;
+import static utils.Constants.TEMP_UID_KEY;
+
 
 public class ScannerActivity extends AppCompatActivity implements ZXingScannerView.ResultHandler {
 
@@ -51,7 +55,7 @@ public class ScannerActivity extends AppCompatActivity implements ZXingScannerVi
         super.onCreate(savedInstanceState);
 
         mFirebaseDatabase = FirebaseDatabase.getInstance();
-        devicesRef = mFirebaseDatabase.getReference("pairedDevices");
+        devicesRef = mFirebaseDatabase.getReference(DB_PATH_PAIRED_DEVICES);
         mScannerView = new ZXingScannerView(this);
         setContentView(mScannerView);
 
@@ -76,11 +80,13 @@ public class ScannerActivity extends AppCompatActivity implements ZXingScannerVi
 
                 if (dataSnapshot.getChildrenCount() > 0) {
                     User user = dataSnapshot.getChildren().iterator().next().getValue(User.class);
-                    //Toast.makeText(getApplicationContext(), userId, Toast.LENGTH_LONG).show();
                     deviceName = Build.MODEL;
+                    if (user == null) {
+                        throw new NullPointerException("User is null");
+                    }
                     senderPermPairCode = user.getPermPairCode();
                     senderDeviceName = user.getDeviceName();
-                    DatabaseReference pairingRef = mFirebaseDatabase.getReference("isPairing").push();
+                    DatabaseReference pairingRef = mFirebaseDatabase.getReference(DB_PATH_IS_PAIRING).push();
                     Pairing pairing = new Pairing(pairCode, userPermPairCode, deviceName);
                     pairingRef.setValue(pairing).addOnCompleteListener(new OnCompleteListener<Void>() {
                         @Override
@@ -100,7 +106,7 @@ public class ScannerActivity extends AppCompatActivity implements ZXingScannerVi
             }
         };
 
-        verifyCodeQuery = mFirebaseDatabase.getReference().child("users")
+        verifyCodeQuery = mFirebaseDatabase.getReference().child(DB_PATH_USERS)
                 .orderByChild("pairCode").equalTo(pairCode);
         verifyCodeQuery.addValueEventListener(verifyPairCodeItemListener);
     }
@@ -120,15 +126,13 @@ public class ScannerActivity extends AppCompatActivity implements ZXingScannerVi
                     Device device = dataSnapshot.getChildren().iterator().next().getValue(Device.class);
                     if (notPaired) {
                         notPaired = false;
-                        DatabaseReference pairRef = mFirebaseDatabase.getReference("pairedDevices").push();
+                        DatabaseReference pairRef = mFirebaseDatabase.getReference(DB_PATH_PAIRED_DEVICES).push();
                         Device pairDevice = new Device(userId, senderPermPairCode, code, deviceName, senderDeviceName, true);
                         pairRef.setValue(pairDevice).addOnCompleteListener(new OnCompleteListener<Void>() {
                             @Override
                             public void onComplete(@NonNull Task<Void> task) {
                                 if (task.isSuccessful()){
                                     Toast.makeText(getApplicationContext(), "Pairing 100% done", Toast.LENGTH_LONG).show();
-                                    //TODO Delete pairing from Firebase
-                                    //TODO Close this screen
                                     finish();
                                 }
                             }
@@ -143,7 +147,7 @@ public class ScannerActivity extends AppCompatActivity implements ZXingScannerVi
             }
         };
 
-        mQuery = mFirebaseDatabase.getReference().child("pairedDevices")
+        mQuery = mFirebaseDatabase.getReference().child(DB_PATH_PAIRED_DEVICES)
                 .orderByChild("pairCode").equalTo(code);
         mQuery.addValueEventListener(pairingItemListener);
     }
@@ -151,27 +155,9 @@ public class ScannerActivity extends AppCompatActivity implements ZXingScannerVi
     private void detachPairingItemListener() {
         if (pairingItemListener != null) {
             mQuery.removeEventListener(pairingItemListener);
+            pairingItemListener = null;
         }
     }
-
-    /*private void tempRegistration() {
-        final DatabaseReference myRef = mDatabase.getReference("users").push();
-        PairCodeGenerator permPairCode = new PairCodeGenerator()
-        user = new User(false, null, null);
-        myRef.setValue(user).addOnCompleteListener(new OnCompleteListener<Void>() {
-            @Override
-            public void onComplete(@NonNull Task<Void> task) {
-                if (task.isSuccessful()) {
-                    SharedPreferences.Editor editor = preferences.edit();
-                    editor.putString(TEMP_UID_KEY, myRef.getKey());
-                    editor.apply();
-                    Toast.makeText(getApplicationContext(), "ClipAir temp user created!", Toast.LENGTH_LONG).show();
-                    userId = myRef.getKey();
-                    insertClipItem();
-                }
-            }
-        });
-    } */
 
     @Override
     protected void onResume() {

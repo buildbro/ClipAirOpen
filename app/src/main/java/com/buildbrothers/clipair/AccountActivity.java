@@ -8,8 +8,10 @@ import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -34,9 +36,12 @@ import java.util.Map;
 
 import model.User;
 
-import static com.buildbrothers.clipair.MainActivity.PERM_PAIR_CODE;
-import static com.buildbrothers.clipair.MainActivity.TEMP_UID_KEY;
-import static com.buildbrothers.clipair.WelcomeActivity.ORIGIN_CODE_NAME;
+import static utils.Constants.DB_PATH_USERS;
+import static utils.Constants.FIRST_RUN_KEY;
+import static utils.Constants.ORIGIN_CODE_KEY;
+import static utils.Constants.PERM_PAIR_CODE;
+import static utils.Constants.TEMP_UID_KEY;
+
 
 public class AccountActivity extends AppCompatActivity {
 
@@ -47,6 +52,7 @@ public class AccountActivity extends AppCompatActivity {
     private FirebaseDatabase mFirebaseDatabase;
     private DatabaseReference userDbRef;
     private TextView signOutBtn;
+    private ProgressBar signOutProgressBar;
     private TextView currentUserTextView;
 
     private SharedPreferences mPreference;
@@ -63,11 +69,14 @@ public class AccountActivity extends AppCompatActivity {
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        }
 
-        this.setTitle("User Account");
+        this.setTitle(getString(R.string.account_activity_name));
 
         signOutBtn = findViewById(R.id.sign_out_btn);
+        signOutProgressBar = findViewById(R.id.sign_out_pb);
         signOutBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -75,9 +84,10 @@ public class AccountActivity extends AppCompatActivity {
             }
         });
 
+
         Intent intent = getIntent();
         if (intent != null) {
-            originCode = intent.getIntExtra(ORIGIN_CODE_NAME, 0);
+            originCode = intent.getIntExtra(ORIGIN_CODE_KEY, 0);
         }
 
         mFirebaseAuth = FirebaseAuth.getInstance();
@@ -86,7 +96,7 @@ public class AccountActivity extends AppCompatActivity {
         userId = mPreference.getString(TEMP_UID_KEY, "");
 
         mFirebaseDatabase = FirebaseDatabase.getInstance();
-        userDbRef = mFirebaseDatabase.getReference("users");
+        userDbRef = mFirebaseDatabase.getReference(DB_PATH_USERS);
 
         mAuthStateListener = new FirebaseAuth.AuthStateListener() {
             @Override
@@ -97,6 +107,7 @@ public class AccountActivity extends AppCompatActivity {
                     //this user is signed in do your stuff
                     updateUserDetailsUI(user);
                     userEmail = user.getEmail();
+                    activateUser(user);
 
                 } else {
                     createSignInIntent();
@@ -127,11 +138,18 @@ public class AccountActivity extends AppCompatActivity {
     }
 
     public void signOut() {
+        signOutBtn.setVisibility(View.GONE);
+        signOutProgressBar.setVisibility(View.VISIBLE);
         AuthUI.getInstance()
                 .signOut(this)
                 .addOnCompleteListener(new OnCompleteListener<Void>() {
                     public void onComplete(@NonNull Task<Void> task) {
-
+                        SharedPreferences.Editor outEditor = mPreference.edit();
+                        outEditor.putBoolean(FIRST_RUN_KEY, true);
+                        outEditor.putString(TEMP_UID_KEY, "");
+                        outEditor.apply();
+                        signOutBtn.setVisibility(View.VISIBLE);
+                        signOutProgressBar.setVisibility(View.GONE);
                     }
                 });
     }
@@ -141,7 +159,6 @@ public class AccountActivity extends AppCompatActivity {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == RC_SIGN_IN) {
             if (resultCode == RESULT_OK) {
-                activateUser(userEmail);
                 Toast.makeText(getApplicationContext(), "Sign in Successful!", Toast.LENGTH_SHORT).show();
             } else if (resultCode == RESULT_CANCELED) {
                 Toast.makeText(getApplicationContext(), "Sign in Canceled!", Toast.LENGTH_SHORT).show();
@@ -150,7 +167,8 @@ public class AccountActivity extends AppCompatActivity {
         }
     }
 
-    private void activateUser(final String email) {
+    private void activateUser(FirebaseUser user) {
+        final String email = user.getEmail();
         FirebaseInstanceId.getInstance()
                 .getInstanceId().addOnCompleteListener(new OnCompleteListener<InstanceIdResult>() {
             @Override
@@ -162,13 +180,13 @@ public class AccountActivity extends AppCompatActivity {
                 String firebaseToken = task.getResult().getToken();
                 SharedPreferences.Editor editor = mPreference.edit();
                 editor.putString(PERM_PAIR_CODE, firebaseToken);
-                editor.putBoolean("firstRun", false);
+                editor.putBoolean(FIRST_RUN_KEY, false);
                 editor.apply();
             }
         });
 
-        Query userCheckQuery = mFirebaseDatabase.getReference().child("users")
-                .orderByChild("userId").equalTo(email);
+        Query userCheckQuery = mFirebaseDatabase.getReference().child(DB_PATH_USERS)
+                .orderByChild("userId").equalTo(user.getEmail());
         userCheckQuery.addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
@@ -177,24 +195,23 @@ public class AccountActivity extends AppCompatActivity {
                     SharedPreferences.Editor editor = mPreference.edit();
                     editor.putString(TEMP_UID_KEY, userPushKey);
                     editor.apply();
-
-                    //TODO Update local pref userID to the one for this item
                 } else {
                     //check if temporal account already exists
+                    String permPairCode = mPreference.getString(PERM_PAIR_CODE, "");
                     if (!userId.equals("")) {
-                        //TODO update this user
                         Map<String, Object> userUpdateMap = new HashMap<>();
                         userUpdateMap.put("userId", email);
                         userUpdateMap.put("registered", true);
+                        userUpdateMap.put("permPairCode", permPairCode);
                         userDbRef.child(userId).updateChildren(userUpdateMap);
 
                     } else {
                         //register new user
-                        String permPairCode = mPreference.getString(PERM_PAIR_CODE, "");
-
-                        final DatabaseReference newUserDbRef = mFirebaseDatabase.getReference("users").push();
-                        User user = new User(true, email, null, permPairCode);
-                        newUserDbRef.setValue(user);
+                        if (email != null) {
+                            final DatabaseReference newUserDbRef = mFirebaseDatabase.getReference(DB_PATH_USERS).push();
+                            User user = new User(true, email, null, permPairCode);
+                            newUserDbRef.setValue(user);
+                        }
                     }
                 }
 

@@ -7,6 +7,8 @@ import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.ProgressBar;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.gms.tasks.OnCompleteListener;
@@ -18,15 +20,19 @@ import com.google.firebase.iid.InstanceIdResult;
 
 import model.User;
 
-import static com.buildbrothers.clipair.MainActivity.PERM_PAIR_CODE;
-import static com.buildbrothers.clipair.MainActivity.TEMP_UID_KEY;
+import static utils.Constants.DB_PATH_USERS;
+import static utils.Constants.FIRST_RUN_KEY;
+import static utils.Constants.ORIGIN_CODE_KEY;
+import static utils.Constants.ORIGIN_CODE_VALUE_WELCOME;
+import static utils.Constants.PERM_PAIR_CODE;
+import static utils.Constants.TEMP_UID_KEY;
 
 public class WelcomeActivity extends AppCompatActivity {
 
-    public static final String ORIGIN_CODE_NAME = "origin";
-    public static final int ORIGIN_CODE_WELCOME = 1; //1 = WelcomeActivity, 2 = MainActivity
     private SharedPreferences mPreferences;
     private FirebaseDatabase mFirebaseDatabase;
+    private TextView guestSignInLink;
+    private ProgressBar signInProgressBar;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -35,6 +41,13 @@ public class WelcomeActivity extends AppCompatActivity {
         mPreferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
 
         mFirebaseDatabase = FirebaseDatabase.getInstance();
+
+        initializeUI();
+    }
+
+    private void initializeUI() {
+        guestSignInLink = findViewById(R.id.sign_in_guest);
+        signInProgressBar = findViewById(R.id.sign_in_pb);
     }
 
     public void startAsGuest(View v) {
@@ -55,28 +68,36 @@ public class WelcomeActivity extends AppCompatActivity {
 
     public void startAsUser(View view) {
         Intent accountIntent = new Intent(WelcomeActivity.this, AccountActivity.class);
-        accountIntent.putExtra(ORIGIN_CODE_NAME, ORIGIN_CODE_WELCOME);
+        accountIntent.putExtra(ORIGIN_CODE_KEY, ORIGIN_CODE_VALUE_WELCOME);
         startActivity(accountIntent);
-        finish(); //TODO this is temporal
+        finish();
     }
 
 
     private void tempRegistration(final String permPairCode) {
-        final DatabaseReference myRef = mFirebaseDatabase.getReference("users").push();
+        guestSignInLink.setVisibility(View.GONE);
+        signInProgressBar.setVisibility(View.VISIBLE);
+
+        final DatabaseReference myRef = mFirebaseDatabase.getReference(DB_PATH_USERS).push();
         User user = new User(false, null, null, permPairCode);
         myRef.setValue(user).addOnCompleteListener(new OnCompleteListener<Void>() {
             @Override
             public void onComplete(@NonNull Task<Void> task) {
                 if (task.isSuccessful()) {
+                    guestSignInLink.setVisibility(View.VISIBLE);
+                    signInProgressBar.setVisibility(View.GONE);
                     SharedPreferences.Editor editor = mPreferences.edit();
                     editor.putString(TEMP_UID_KEY, myRef.getKey());
                     editor.putString(PERM_PAIR_CODE, permPairCode);
-                    editor.putBoolean("firstRun", false);
+                    editor.putBoolean(FIRST_RUN_KEY, false);
                     editor.apply();
-                    Toast.makeText(getApplicationContext(), "ClipAir temp user created!", Toast.LENGTH_LONG).show();
+                    Toast.makeText(getApplicationContext(), R.string.temp_user_created, Toast.LENGTH_LONG).show();
                     Intent homeIntent = new Intent(WelcomeActivity.this, MainActivity.class);
+                    homeIntent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK|Intent.FLAG_ACTIVITY_NEW_TASK);
                     startActivity(homeIntent);
-                    finish();
+                } else {
+                    guestSignInLink.setVisibility(View.VISIBLE);
+                    signInProgressBar.setVisibility(View.GONE);
                 }
             }
         });

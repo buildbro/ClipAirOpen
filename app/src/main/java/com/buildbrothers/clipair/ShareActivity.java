@@ -45,7 +45,14 @@ import model.Pairing;
 import model.SentItem;
 import utils.PairCodeGenerator;
 
-import static com.buildbrothers.clipair.MainActivity.TEMP_UID_KEY;
+import static utils.Constants.DB_PATH_IS_PAIRING;
+import static utils.Constants.DB_PATH_PAIRED_DEVICES;
+import static utils.Constants.DB_PATH_SENT_ITEMS;
+import static utils.Constants.DB_PATH_USERS;
+import static utils.Constants.EXTRA_BODY_KEY;
+import static utils.Constants.PAIR_CODE_SIZE;
+import static utils.Constants.TEMP_UID_KEY;
+
 
 public class ShareActivity extends AppCompatActivity implements RecyclerViewClickListener {
 
@@ -80,24 +87,24 @@ public class ShareActivity extends AppCompatActivity implements RecyclerViewClic
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
+        if (getSupportActionBar() == null) {
+            throw new NullPointerException("supported actionbar null");
+        }
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 
-        this.setTitle("Share");
+        this.setTitle(getString(R.string.share_activity_title));
 
         preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
         userId = preferences.getString(TEMP_UID_KEY, "");
 
         mFirebaseDatabase = FirebaseDatabase.getInstance();
-        rootRef = mFirebaseDatabase.getReference("users");
+        rootRef = mFirebaseDatabase.getReference(DB_PATH_USERS);
         initializeUI();
 
         Intent intent = getIntent();
         if (intent != null) {
-            mainText = intent.getStringExtra("body");
+            mainText = intent.getStringExtra(EXTRA_BODY_KEY);
         }
-
-        PairCodeGenerator pairCodeGenerator = new PairCodeGenerator(7, new SecureRandom());
-        pairCode = pairCodeGenerator.nextString();
 
     }
 
@@ -143,6 +150,9 @@ public class ShareActivity extends AppCompatActivity implements RecyclerViewClic
                 mDeviceArray.clear();
                 for (DataSnapshot dataSnapshot1 : dataSnapshot.getChildren()) {
                     Device device = dataSnapshot1.getValue(Device.class);
+                    if (device == null) {
+                        throw new NullPointerException("Device null");
+                    }
                     device.setPushKey(dataSnapshot1.getKey());
                     mDeviceArray.add(device);
                 }
@@ -160,7 +170,7 @@ public class ShareActivity extends AppCompatActivity implements RecyclerViewClic
             }
         };
 
-        pairedQuery = mFirebaseDatabase.getReference("pairedDevices")
+        pairedQuery = mFirebaseDatabase.getReference(DB_PATH_PAIRED_DEVICES)
                 .orderByChild("userId").equalTo(userId);
         pairedQuery.addValueEventListener(deviceListItemListener);
     }
@@ -180,7 +190,10 @@ public class ShareActivity extends AppCompatActivity implements RecyclerViewClic
                     if (notPaired) {
                         notPaired = false;
                         Pairing pairing = dataSnapshot.getChildren().iterator().next().getValue(Pairing.class);
-                        Toast.makeText(getApplicationContext(), "Yo hoo!!", Toast.LENGTH_LONG).show();
+                        Toast.makeText(getApplicationContext(), "Pairing ...", Toast.LENGTH_LONG).show();
+                        if (pairing == null) {
+                            throw new NullPointerException("Pairing is null");
+                        }
                         String permPairCode = pairing.getPermPairCode();
                         String receiverDevice = pairing.getDeviceName();
                         addNewDevice(permPairCode, receiverDevice);
@@ -193,7 +206,7 @@ public class ShareActivity extends AppCompatActivity implements RecyclerViewClic
 
             }
         };
-        mQuery = mFirebaseDatabase.getReference().child("isPairing")
+        mQuery = mFirebaseDatabase.getReference().child(DB_PATH_IS_PAIRING)
                 .orderByChild("pairCode").equalTo(pairCode);
         mQuery.addValueEventListener(pairingItemListener);
     }
@@ -206,7 +219,7 @@ public class ShareActivity extends AppCompatActivity implements RecyclerViewClic
     }
 
     private void addNewDevice(String permPairCode, String receiverDeviceName) {
-        final DatabaseReference newDeviceRef = mFirebaseDatabase.getReference().child("pairedDevices").push();
+        final DatabaseReference newDeviceRef = mFirebaseDatabase.getReference().child(DB_PATH_PAIRED_DEVICES).push();
         Device newDevice = new Device(userId, permPairCode, pairCode, deviceName, receiverDeviceName, true);
         newDeviceRef.setValue(newDevice).addOnCompleteListener(new OnCompleteListener<Void>() {
             @Override
@@ -224,14 +237,22 @@ public class ShareActivity extends AppCompatActivity implements RecyclerViewClic
 
     private void sendHistoryItem(String pairKey, String text) {
         SentItem sentItem = new SentItem(text, 1);
-        DatabaseReference sendableRef = mFirebaseDatabase.getReference("sentItems/" + pairKey).push();
-        sendableRef.setValue(sentItem);
+        DatabaseReference sendableRef = mFirebaseDatabase.getReference( DB_PATH_SENT_ITEMS + "/" + pairKey).push();
+        sendableRef.setValue(sentItem).addOnCompleteListener(new OnCompleteListener<Void>() {
+            @Override
+            public void onComplete(@NonNull Task<Void> task) {
+                Toast.makeText(getApplicationContext(), "Item sent!", Toast.LENGTH_SHORT).show();
+                finish();
+            }
+        });
     }
 
     @Override
     public void onRowClicked(int position) {
         Device currentDevice = mDeviceArray.get(position);
-        sendHistoryItem(currentDevice.getPushKey(), mainText);
+        if (mainText != null) {
+            sendHistoryItem(currentDevice.getPushKey(), mainText);
+        }
 
     }
 
@@ -247,7 +268,7 @@ public class ShareActivity extends AppCompatActivity implements RecyclerViewClic
                     if (item.getItemId() == R.id.remove_device) {
                         Device currentDevice = mDeviceArray.get(position);
                         String currentPushKey = currentDevice.getPushKey();
-                        DatabaseReference deleteRef = mFirebaseDatabase.getReference("pairedDevice/" + currentPushKey);
+                        DatabaseReference deleteRef = mFirebaseDatabase.getReference(DB_PATH_PAIRED_DEVICES + "/" + currentPushKey);
                         deleteRef.removeValue();
                     }
                     return false;
@@ -261,6 +282,9 @@ public class ShareActivity extends AppCompatActivity implements RecyclerViewClic
     protected void onResume() {
         super.onResume();
         retrievePairedDevices();
+
+        PairCodeGenerator pairCodeGenerator = new PairCodeGenerator(PAIR_CODE_SIZE, new SecureRandom());
+        pairCode = pairCodeGenerator.nextString();
         generateQR();
     }
 
